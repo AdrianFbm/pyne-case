@@ -127,7 +127,7 @@ def _build_sidebar():
             "color": "#b0b0be",
         },
         children=[
-            html.Div("Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#55556a", "marginBottom": "12px"}),
+            html.Div("Database Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#55556a", "marginBottom": "12px"}),
             *table_blocks,
         ],
     )
@@ -152,7 +152,7 @@ app.layout = html.Div(
 
                 # Input area
                 html.Div(
-                    style={"display": "flex", "gap": "8px", "padding": "15px 0"},
+                    style={"display": "flex", "gap": "8px", "padding": "15px 0", "maxWidth": "680px", "width": "100%", "margin": "0 auto"},
                     children=[
                         dcc.Input(
                             id="user-input",
