@@ -1,9 +1,13 @@
 import json
-import anthropic
 from db import get_schema, run_query
+from settings import settings
 
-client = anthropic.Anthropic()
-MODEL = "claude-sonnet-4-20250514"
+if settings.llm_provider == "anthropic":
+    import anthropic
+    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+else:
+    from openai import OpenAI
+    client = OpenAI(api_key=settings.openai_api_key)
 
 SYSTEM_PROMPT = f"""You are a data analyst for Jaffle Shop, a fictional sandwich chain.
 You answer business questions by writing SQL against a DuckDB database, then explaining the results in plain language.
@@ -42,7 +46,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> dict:
         messages.extend(chat_history)
     messages.append({"role": "user", "content": question})
 
-    response = _call_claude(messages)
+    response = _call_llm(messages)
 
     # If no SQL, it's a clarification — return as-is
     if not response.get("sql"):
@@ -58,7 +62,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> dict:
             "role": "user",
             "content": f"That query failed with: {result}\nPlease fix the SQL and try again.",
         })
-        response = _call_claude(messages)
+        response = _call_llm(messages)
         if not response.get("sql"):
             return {**response, "data": None}
         result = run_query(response["sql"])
@@ -71,21 +75,31 @@ def ask(question: str, chat_history: list[dict] | None = None) -> dict:
         "role": "user",
         "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
     })
-    final = _call_claude(messages)
+    final = _call_llm(messages)
     final["sql"] = response["sql"]
     final["data"] = result
     return final
 
 
-def _call_claude(messages: list[dict]) -> dict:
-    """Call the Claude API and parse the JSON response."""
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=messages,
-    )
-    text = resp.content[0].text.strip()
+def _call_llm(messages: list[dict]) -> dict:
+    """Call the configured LLM provider and parse the JSON response."""
+    if settings.llm_provider == "anthropic":
+        resp = client.messages.create(
+            model=settings.llm_model,
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            messages=messages,
+        )
+        text = resp.content[0].text.strip()
+    else:
+        openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}, *messages]
+        resp = client.chat.completions.create(
+            model=settings.llm_model,
+            max_tokens=1024,
+            messages=openai_messages,
+        )
+        text = resp.choices[0].message.content.strip()
+
     # Strip markdown code fences if present
     if text.startswith("```"):
         text = text.split("\n", 1)[1]
