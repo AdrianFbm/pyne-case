@@ -6,17 +6,40 @@ from agent import ask
 app = dash.Dash(__name__)
 app.title = "Jaffle Shop AI Assistant"
 
+# Inject dark-mode CSS for body background and input placeholder
+app.index_string = '''<!DOCTYPE html>
+<html>
+<head>
+{%metas%}
+<title>{%title%}</title>
+{%favicon%}
+{%css%}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { background-color: #1a1a2e; margin: 0; font-family: 'Inter', sans-serif; }
+#user-input { font-family: 'Inter', sans-serif; height: 44px; line-height: 44px; box-sizing: border-box; }
+#user-input::placeholder { color: #a0a0b0 !important; opacity: 1; }
+</style>
+</head>
+<body>
+{%app_entry%}
+<footer>{%config%}{%scripts%}{%renderer%}</footer>
+</body>
+</html>'''
+
 app.layout = html.Div(
-    style={"maxWidth": "800px", "margin": "0 auto", "fontFamily": "system-ui, sans-serif", "height": "100vh", "display": "flex", "flexDirection": "column"},
+    style={"maxWidth": "800px", "margin": "0 auto", "fontFamily": "'Inter', sans-serif", "height": "100vh", "display": "flex", "flexDirection": "column", "backgroundColor": "#1a1a2e", "color": "#e0e0e0", "padding": "0 15px"},
     children=[
-        html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#2c3e50"}),
+        html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#e0e0e0"}),
         html.P("Ask questions about customers, orders, and products in plain English.",
-               style={"textAlign": "center", "color": "#7f8c8d", "margin": "0 0 15px"}),
+               style={"textAlign": "center", "color": "#8e8e9e", "margin": "0 0 15px"}),
 
         # Chat history display
         html.Div(
             id="chat-container",
-            style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #e0e0e0", "borderRadius": "8px", "backgroundColor": "#fafafa"},
+            style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #2a2a4a", "borderRadius": "8px", "backgroundColor": "#16213e"},
         ),
 
         # Input area
@@ -26,8 +49,8 @@ app.layout = html.Div(
                 dcc.Input(
                     id="user-input",
                     type="text",
-                    placeholder="e.g. What were our top 5 products by revenue?",
-                    style={"flex": "1", "padding": "12px", "borderRadius": "6px", "border": "1px solid #ccc", "fontSize": "14px"},
+                    placeholder="Ask about products, orders, revenue...",
+                    style={"flex": "1", "padding": "0 12px", "borderRadius": "6px", "border": "1px solid #2a2a4a", "fontSize": "14px", "backgroundColor": "#0f3460", "color": "#e0e0e0", "height": "44px", "lineHeight": "44px"},
                     debounce=False,
                     n_submit=0,
                 ),
@@ -58,8 +81,8 @@ def user_bubble(text):
 def assistant_bubble(children):
     return html.Div(
         children,
-        style={"backgroundColor": "#ffffff", "padding": "10px 14px", "borderRadius": "12px 12px 12px 2px",
-               "border": "1px solid #e0e0e0", "maxWidth": "85%", "marginBottom": "10px"},
+        style={"backgroundColor": "#1e2a4a", "color": "#e0e0e0", "padding": "10px 14px", "borderRadius": "12px 12px 12px 2px",
+               "border": "1px solid #2a2a4a", "maxWidth": "85%", "marginBottom": "10px"},
     )
 
 
@@ -125,8 +148,8 @@ def _render_messages(messages):
             if msg.get("sql"):
                 children.append(
                     html.Details([
-                        html.Summary("View SQL", style={"cursor": "pointer", "color": "#7f8c8d", "fontSize": "12px"}),
-                        html.Code(msg["sql"], style={"display": "block", "padding": "8px", "backgroundColor": "#f5f5f5", "borderRadius": "4px", "fontSize": "12px", "whiteSpace": "pre-wrap"}),
+                        html.Summary("View SQL", style={"cursor": "pointer", "color": "#8e8e9e", "fontSize": "12px"}),
+                        html.Code(msg["sql"], style={"display": "block", "padding": "8px", "backgroundColor": "#0d1b2a", "color": "#a0d0ff", "borderRadius": "4px", "fontSize": "12px", "whiteSpace": "pre-wrap"}),
                     ], style={"marginTop": "8px"})
                 )
 
@@ -137,8 +160,9 @@ def _render_messages(messages):
                         data=msg["data_records"],
                         columns=[{"name": c, "id": c} for c in msg["data_columns"]],
                         style_table={"overflowX": "auto", "marginTop": "10px"},
-                        style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px"},
-                        style_header={"backgroundColor": "#ecf0f1", "fontWeight": "bold"},
+                        style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px", "backgroundColor": "#16213e", "color": "#e0e0e0", "border": "1px solid #2a2a4a"},
+                        style_header={"backgroundColor": "#0f3460", "fontWeight": "bold", "color": "#e0e0e0", "border": "1px solid #2a2a4a"},
+                        style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#1a2744"}],
                         page_size=10,
                     )
                 )
@@ -156,7 +180,7 @@ def _render_messages(messages):
                 elif chart.get("type") == "pie":
                     fig = px.pie(df, names=chart["x"], values=chart["y"], title=chart.get("title", ""))
                 if fig:
-                    fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), height=350)
+                    fig.update_layout(template="plotly_dark", paper_bgcolor="#1e2a4a", plot_bgcolor="#16213e", margin=dict(l=20, r=20, t=40, b=20), height=350)
                     children.append(dcc.Graph(figure=fig, style={"marginTop": "10px"}))
 
             elements.append(assistant_bubble(children))
