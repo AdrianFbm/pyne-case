@@ -4,7 +4,7 @@ import plotly.express as px
 from agent import ask
 
 app = dash.Dash(__name__)
-app.title = "Jaffle Shop AI Assistant"
+app.title = "AIoli"
 
 # Inject dark-mode CSS for body background and input placeholder
 app.index_string = '''<!DOCTYPE html>
@@ -154,7 +154,13 @@ app.layout = html.Div(
         html.Div(
             style={"flex": "1", "display": "flex", "flexDirection": "column", "padding": "0 24px"},
             children=[
-                html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#ececf1", "fontWeight": "600"}),
+                html.Div(
+                    style={"display": "flex", "alignItems": "center", "justifyContent": "center", "gap": "12px", "padding": "20px 0 10px"},
+                    children=[
+                        html.Img(src="/assets/logo.svg", style={"width": "48px", "height": "48px"}),
+                        html.H2("AIoli", style={"margin": "0", "color": "#ececf1", "fontWeight": "600"}),
+                    ],
+                ),
                 html.P("Ask questions about customers, orders, and products in plain English.",
                        style={"textAlign": "center", "color": "#8e8ea0", "margin": "0 0 15px"}),
 

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title>AIoli Friendly Beige Logo</title>
+  <desc>A simple, happy, friendly beige sandwich logo with two big eyes and an antenna on a transparent background.</desc>
+
+  <!-- antenna -->
+  <g stroke="#5a4636" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="512" y1="176" x2="512" y2="278" stroke-width="18"/>
+    <circle cx="512" cy="140" r="30" fill="#d8c2a8" stroke-width="10"/>
+  </g>
+
+  <!-- sandwich -->
+  <g stroke="#5a4636" stroke-width="14" stroke-linecap="round" stroke-linejoin="round">
+    <!-- top bread -->
+    <path d="M252 330
+             Q512 205 772 330
+             L772 430
+             L252 430 Z"
+          fill="#e7d3bb"/>
+
+    <!-- filling -->
+    <rect x="252" y="430" width="520" height="62" rx="31" fill="#b8926a"/>
+
+    <!-- bottom bread -->
+    <path d="M252 492
+             L772 492
+             L742 635
+             Q512 720 282 635
+             Z"
+          fill="#dcc1a1"/>
+
+    <!-- eyes -->
+    <circle cx="430" cy="458" r="60" fill="#fffdf9"/>
+    <circle cx="594" cy="458" r="60" fill="#fffdf9"/>
+
+    <!-- pupils -->
+    <circle cx="430" cy="450" r="16" fill="#5a4636" stroke="none"/>
+    <circle cx="594" cy="450" r="16" fill="#5a4636" stroke="none"/>
+
+    <!-- highlights -->
+    <circle cx="423" cy="443" r="5" fill="#ffffff" stroke="none"/>
+    <circle cx="587" cy="443" r="5" fill="#ffffff" stroke="none"/>
+
+    <!-- cheeks -->
+    <ellipse cx="355" cy="520" rx="22" ry="12" fill="#efcfbf" stroke="none" opacity="0.95"/>
+    <ellipse cx="669" cy="520" rx="22" ry="12" fill="#efcfbf" stroke="none" opacity="0.95"/>
+
+    <!-- smile -->
+    <path d="M434 542 Q512 600 590 542" fill="none" stroke="#5a4636" stroke-width="12"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="512" y="820"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="110"
+        font-weight="700"
+        fill="#5a4636">AIoli</text>
+</svg>

@@ -1,4 +1,4 @@
-"""Launch the Jaffle Shop AI Assistant."""
+"""Launch AIoli — the Jaffle Shop AI Assistant."""
 
 import subprocess
 import sys
