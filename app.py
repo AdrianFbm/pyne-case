@@ -28,6 +28,20 @@ details summary::-webkit-details-marker { display: none; }
 details > summary { list-style: none; }
 #send-btn { transition: background-color 0.2s ease; }
 #send-btn:hover { background-color: #6a4de0 !important; }
+@keyframes dotPulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+.loading-dots span {
+  display: inline-block;
+  width: 8px; height: 8px;
+  margin: 0 3px;
+  background: #8e8ea0;
+  border-radius: 50%;
+  animation: dotPulse 1.4s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
 </style>
 </head>
 <body>
@@ -174,6 +188,7 @@ app.layout = html.Div(
                 # Hidden stores
                 dcc.Store(id="chat-history", data=[]),
                 dcc.Store(id="display-messages", data=[]),
+                dcc.Store(id="pending-question", data=None),
             ],
         ),
     ],
@@ -197,40 +212,67 @@ def assistant_bubble(children):
 
 
 @callback(
-    Output("chat-container", "children"),
-    Output("chat-history", "data"),
-    Output("display-messages", "data"),
+    Output("chat-container", "children", allow_duplicate=True),
+    Output("display-messages", "data", allow_duplicate=True),
+    Output("pending-question", "data"),
     Output("user-input", "value"),
     Input("send-btn", "n_clicks"),
     Input("user-input", "n_submit"),
     State("user-input", "value"),
-    State("chat-history", "data"),
     State("display-messages", "data"),
     prevent_initial_call=True,
 )
-def handle_send(n_clicks, n_submit, user_input, chat_history, display_messages):
+def show_user_message(n_clicks, n_submit, user_input, display_messages):
+    """Instantly show the user's message and a loading indicator."""
     if not user_input or not user_input.strip():
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     question = user_input.strip()
     display_messages = display_messages or []
-    chat_history = chat_history or []
-
-    # Add user message to display
     display_messages.append({"role": "user", "content": question})
 
-    # Call the agent
+    # Render messages + loading dots
+    elements = _render_messages(display_messages)
+    loading_bubble = html.Div(
+        html.Div(
+            [html.Span(), html.Span(), html.Span()],
+            className="loading-dots",
+            style={"padding": "4px 0"},
+        ),
+        style={"backgroundColor": "#1c1c22", "color": "#ececf1", "padding": "12px 16px", "borderRadius": "16px 16px 16px 4px",
+               "border": "1px solid #2a2a30", "width": "fit-content", "marginBottom": "10px"},
+    )
+    elements.append(loading_bubble)
+
+    return elements, display_messages, question, ""
+
+
+@callback(
+    Output("chat-container", "children"),
+    Output("chat-history", "data"),
+    Output("display-messages", "data"),
+    Input("pending-question", "data"),
+    State("chat-history", "data"),
+    State("display-messages", "data"),
+    prevent_initial_call=True,
+)
+def handle_llm_response(question, chat_history, display_messages):
+    """Call the LLM and replace the loading indicator with the response."""
+    if not question:
+        return dash.no_update, dash.no_update, dash.no_update
+
+    chat_history = chat_history or []
+    display_messages = display_messages or []
+
     try:
         result = ask(question, chat_history)
     except Exception as e:
         display_messages.append({"role": "assistant", "content": f"Sorry, something went wrong: {e}", "sql": None, "chart": None, "has_data": False})
-        return _render_messages(display_messages), chat_history, display_messages, ""
+        return _render_messages(display_messages), chat_history, display_messages
 
-    # Update Claude chat history for context
     chat_history.append({"role": "user", "content": question})
     chat_history.append({"role": "assistant", "content": result.get("answer", "")})
 
-    # Store display message (data can't be serialized in dcc.Store, handle separately)
     msg = {
         "role": "assistant",
         "content": result.get("answer", ""),
@@ -242,7 +284,7 @@ def handle_send(n_clicks, n_submit, user_input, chat_history, display_messages):
     }
     display_messages.append(msg)
 
-    return _render_messages(display_messages), chat_history, display_messages, ""
+    return _render_messages(display_messages), chat_history, display_messages
 
 
 def _render_messages(messages):
