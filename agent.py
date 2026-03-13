@@ -9,31 +9,10 @@ else:
     from openai import OpenAI
     client = OpenAI(api_key=settings.openai_api_key)
 
-SYSTEM_PROMPT = f"""You are a data analyst for Jaffle Shop, a fictional sandwich chain.
-You answer business questions by writing SQL against a DuckDB database, then explaining the results in plain language.
+from pathlib import Path
 
-DATABASE SCHEMA:
-{get_schema()}
-
-INSTRUCTIONS:
-- Write a single DuckDB-compatible SQL query to answer the user's question.
-- After seeing the results, provide a clear narrative answer a non-technical person can understand.
-- When a chart would help (trends, comparisons, distributions), include a chart spec.
-- If the question is ambiguous, ask for clarification instead of guessing.
-
-RESPONSE FORMAT — always respond with valid JSON and nothing else:
-{{
-  "sql": "SELECT ...",
-  "answer": "Markdown narrative explaining the results",
-  "chart": null OR {{"type": "bar|line|pie", "x": "column_name", "y": "column_name", "title": "Chart Title"}}
-}}
-
-If you need clarification instead of running a query, respond with:
-{{
-  "sql": null,
-  "answer": "Your clarifying question here",
-  "chart": null
-}}"""
+_prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
+SYSTEM_PROMPT = _prompt_template.format(schema=get_schema())
 
 
 def ask(question: str, chat_history: list[dict] | None = None) -> dict:
