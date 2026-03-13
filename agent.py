@@ -66,6 +66,7 @@ def _call_llm(messages: list[dict]) -> dict:
         resp = client.messages.create(
             model=settings.llm_model,
             max_tokens=1024,
+            temperature=0,
             system=SYSTEM_PROMPT,
             messages=messages,
         )
@@ -75,6 +76,7 @@ def _call_llm(messages: list[dict]) -> dict:
         resp = client.chat.completions.create(
             model=settings.llm_model,
             max_tokens=1024,
+            temperature=0,
             messages=openai_messages,
         )
         text = resp.choices[0].message.content.strip()
