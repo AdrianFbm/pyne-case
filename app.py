@@ -18,9 +18,16 @@ app.index_string = '''<!DOCTYPE html>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-body { background-color: #1a1a2e; margin: 0; font-family: 'Inter', sans-serif; }
+body { background-color: #0a0a0f; margin: 0; font-family: 'Inter', sans-serif; }
 #user-input { font-family: 'Inter', sans-serif; height: 44px; line-height: 44px; box-sizing: border-box; }
-#user-input::placeholder { color: #a0a0b0 !important; opacity: 1; }
+#user-input::placeholder { color: #55556a !important; opacity: 1; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #141418; }
+::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 3px; }
+details summary::-webkit-details-marker { display: none; }
+details > summary { list-style: none; }
+#send-btn { transition: background-color 0.2s ease; }
+#send-btn:hover { background-color: #6a4de0 !important; }
 </style>
 </head>
 <body>
@@ -82,8 +89,8 @@ def _build_sidebar():
         col_items = [
             html.Div(
                 [
-                    html.Span(col, style={"color": "#a0a0b8"}),
-                    html.Span(f"  {dtype}", style={"color": "#6a6a80", "fontSize": "11px"}),
+                    html.Span(col, style={"color": "#8e8ea0"}),
+                    html.Span(f"  {dtype}", style={"color": "#55556a", "fontSize": "11px"}),
                 ],
                 style={"padding": "2px 0 2px 12px"},
             )
@@ -94,10 +101,10 @@ def _build_sidebar():
                 [
                     html.Summary(
                         [
-                            html.Span(table_name, style={"fontWeight": "bold", "color": "#e0e0e0"}),
+                            html.Span(table_name, style={"fontWeight": "bold", "color": "#ececf1"}),
                             html.Span(
                                 f" · {info['rows']:,} rows",
-                                style={"color": "#6a6a80", "fontSize": "11px", "fontWeight": "normal"},
+                                style={"color": "#55556a", "fontSize": "11px", "fontWeight": "normal"},
                             ),
                         ],
                         style={"cursor": "pointer", "padding": "6px 0", "listStyleType": "none"},
@@ -112,35 +119,35 @@ def _build_sidebar():
         style={
             "width": "260px",
             "minWidth": "260px",
-            "backgroundColor": "#16213e",
-            "borderRight": "1px solid #2a2a4a",
+            "backgroundColor": "#111115",
+            "borderRight": "1px solid #2a2a30",
             "overflowY": "auto",
-            "padding": "16px",
+            "padding": "20px",
             "fontSize": "13px",
-            "color": "#c0c0d0",
+            "color": "#b0b0be",
         },
         children=[
-            html.Div("Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#6a6a80", "marginBottom": "12px"}),
+            html.Div("Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#55556a", "marginBottom": "12px"}),
             *table_blocks,
         ],
     )
 
 
 app.layout = html.Div(
-    style={"display": "flex", "height": "100vh", "fontFamily": "'Inter', sans-serif", "backgroundColor": "#1a1a2e", "color": "#e0e0e0"},
+    style={"display": "flex", "height": "100vh", "fontFamily": "'Inter', sans-serif", "backgroundColor": "#0a0a0f", "color": "#ececf1"},
     children=[
         _build_sidebar(),
         html.Div(
-            style={"flex": "1", "display": "flex", "flexDirection": "column", "padding": "0 15px"},
+            style={"flex": "1", "display": "flex", "flexDirection": "column", "padding": "0 24px"},
             children=[
-                html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#e0e0e0"}),
+                html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#ececf1", "fontWeight": "600"}),
                 html.P("Ask questions about customers, orders, and products in plain English.",
-                       style={"textAlign": "center", "color": "#8e8e9e", "margin": "0 0 15px"}),
+                       style={"textAlign": "center", "color": "#8e8ea0", "margin": "0 0 15px"}),
 
                 # Chat history display
                 html.Div(
                     id="chat-container",
-                    style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #2a2a4a", "borderRadius": "8px", "backgroundColor": "#16213e"},
+                    style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #2a2a30", "borderRadius": "12px", "backgroundColor": "#141418"},
                 ),
 
                 # Input area
@@ -151,7 +158,7 @@ app.layout = html.Div(
                             id="user-input",
                             type="text",
                             placeholder="Ask about products, orders, revenue...",
-                            style={"flex": "1", "padding": "0 12px", "borderRadius": "6px", "border": "1px solid #2a2a4a", "fontSize": "14px", "backgroundColor": "#0f3460", "color": "#e0e0e0", "height": "44px", "lineHeight": "44px"},
+                            style={"flex": "1", "padding": "0 16px", "borderRadius": "22px", "border": "1px solid #2a2a30", "fontSize": "14px", "backgroundColor": "#1c1c22", "color": "#ececf1", "height": "44px", "lineHeight": "44px"},
                             debounce=False,
                             n_submit=0,
                         ),
@@ -159,7 +166,7 @@ app.layout = html.Div(
                             "Send",
                             id="send-btn",
                             n_clicks=0,
-                            style={"padding": "12px 24px", "borderRadius": "6px", "border": "none", "backgroundColor": "#3498db", "color": "white", "cursor": "pointer", "fontSize": "14px"},
+                            style={"padding": "12px 24px", "borderRadius": "22px", "border": "none", "backgroundColor": "#7c5cfc", "color": "white", "cursor": "pointer", "fontSize": "14px", "fontWeight": "500"},
                         ),
                     ],
                 ),
@@ -176,7 +183,7 @@ app.layout = html.Div(
 def user_bubble(text):
     return html.Div(
         text,
-        style={"backgroundColor": "#3498db", "color": "white", "padding": "10px 14px", "borderRadius": "12px 12px 2px 12px",
+        style={"backgroundColor": "#7c5cfc", "color": "white", "padding": "12px 16px", "borderRadius": "16px 16px 4px 16px",
                "marginLeft": "auto", "maxWidth": "70%", "width": "fit-content", "marginBottom": "10px"},
     )
 
@@ -184,8 +191,8 @@ def user_bubble(text):
 def assistant_bubble(children):
     return html.Div(
         children,
-        style={"backgroundColor": "#1e2a4a", "color": "#e0e0e0", "padding": "10px 14px", "borderRadius": "12px 12px 12px 2px",
-               "border": "1px solid #2a2a4a", "maxWidth": "85%", "marginBottom": "10px"},
+        style={"backgroundColor": "#1c1c22", "color": "#ececf1", "padding": "12px 16px", "borderRadius": "16px 16px 16px 4px",
+               "border": "1px solid #2a2a30", "maxWidth": "85%", "marginBottom": "10px"},
     )
 
 
@@ -251,8 +258,8 @@ def _render_messages(messages):
             if msg.get("sql"):
                 children.append(
                     html.Details([
-                        html.Summary("View SQL", style={"cursor": "pointer", "color": "#8e8e9e", "fontSize": "12px"}),
-                        html.Code(msg["sql"], style={"display": "block", "padding": "8px", "backgroundColor": "#0d1b2a", "color": "#a0d0ff", "borderRadius": "4px", "fontSize": "12px", "whiteSpace": "pre-wrap"}),
+                        html.Summary("View SQL", style={"cursor": "pointer", "color": "#8e8ea0", "fontSize": "12px"}),
+                        html.Code(msg["sql"], style={"display": "block", "padding": "8px", "backgroundColor": "#0e0e14", "color": "#a8b4ff", "borderRadius": "4px", "fontSize": "12px", "whiteSpace": "pre-wrap"}),
                     ], style={"marginTop": "8px"})
                 )
 
@@ -263,9 +270,9 @@ def _render_messages(messages):
                         data=msg["data_records"],
                         columns=[{"name": c, "id": c} for c in msg["data_columns"]],
                         style_table={"overflowX": "auto", "marginTop": "10px"},
-                        style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px", "backgroundColor": "#16213e", "color": "#e0e0e0", "border": "1px solid #2a2a4a"},
-                        style_header={"backgroundColor": "#0f3460", "fontWeight": "bold", "color": "#e0e0e0", "border": "1px solid #2a2a4a"},
-                        style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#1a2744"}],
+                        style_cell={"textAlign": "left", "padding": "6px 10px", "fontSize": "13px", "backgroundColor": "#141418", "color": "#ececf1", "border": "1px solid #2a2a30"},
+                        style_header={"backgroundColor": "#1c1c22", "fontWeight": "bold", "color": "#ececf1", "border": "1px solid #2a2a30"},
+                        style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#18181e"}],
                         page_size=10,
                     )
                 )
@@ -283,7 +290,7 @@ def _render_messages(messages):
                 elif chart.get("type") == "pie":
                     fig = px.pie(df, names=chart["x"], values=chart["y"], title=chart.get("title", ""))
                 if fig:
-                    fig.update_layout(template="plotly_dark", paper_bgcolor="#1e2a4a", plot_bgcolor="#16213e", margin=dict(l=20, r=20, t=40, b=20), height=350)
+                    fig.update_layout(template="plotly_dark", paper_bgcolor="#1c1c22", plot_bgcolor="#141418", margin=dict(l=20, r=20, t=40, b=20), height=350)
                     children.append(dcc.Graph(figure=fig, style={"marginTop": "10px"}))
 
             elements.append(assistant_bubble(children))
