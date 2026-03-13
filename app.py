@@ -29,43 +29,146 @@ body { background-color: #1a1a2e; margin: 0; font-family: 'Inter', sans-serif; }
 </body>
 </html>'''
 
+def _build_sidebar():
+    """Build the database schema sidebar."""
+    schema = {
+        "customers": {
+            "rows": 200,
+            "columns": [
+                ("customer_id", "INTEGER"),
+                ("first_name", "VARCHAR"),
+                ("last_name", "VARCHAR"),
+                ("email", "VARCHAR"),
+                ("loyalty_tier", "VARCHAR"),
+                ("created_at", "TIMESTAMP"),
+            ],
+        },
+        "order_items": {
+            "rows": 6583,
+            "columns": [
+                ("order_item_id", "INTEGER"),
+                ("order_id", "INTEGER"),
+                ("product_id", "INTEGER"),
+                ("quantity", "INTEGER"),
+                ("unit_price", "DECIMAL"),
+                ("line_total", "DECIMAL"),
+            ],
+        },
+        "orders": {
+            "rows": 3000,
+            "columns": [
+                ("order_id", "INTEGER"),
+                ("customer_id", "INTEGER"),
+                ("order_date", "DATE"),
+                ("status", "VARCHAR"),
+                ("total_amount", "DECIMAL"),
+                ("order_channel", "VARCHAR"),
+            ],
+        },
+        "products": {
+            "rows": 16,
+            "columns": [
+                ("product_id", "INTEGER"),
+                ("product_name", "VARCHAR"),
+                ("category", "VARCHAR"),
+                ("price", "DECIMAL"),
+                ("description", "VARCHAR"),
+            ],
+        },
+    }
+
+    table_blocks = []
+    for table_name, info in schema.items():
+        col_items = [
+            html.Div(
+                [
+                    html.Span(col, style={"color": "#a0a0b8"}),
+                    html.Span(f"  {dtype}", style={"color": "#6a6a80", "fontSize": "11px"}),
+                ],
+                style={"padding": "2px 0 2px 12px"},
+            )
+            for col, dtype in info["columns"]
+        ]
+        table_blocks.append(
+            html.Details(
+                [
+                    html.Summary(
+                        [
+                            html.Span(table_name, style={"fontWeight": "bold", "color": "#e0e0e0"}),
+                            html.Span(
+                                f" · {info['rows']:,} rows",
+                                style={"color": "#6a6a80", "fontSize": "11px", "fontWeight": "normal"},
+                            ),
+                        ],
+                        style={"cursor": "pointer", "padding": "6px 0", "listStyleType": "none"},
+                    ),
+                    html.Div(col_items, style={"paddingBottom": "6px"}),
+                ],
+                style={"marginBottom": "4px"},
+            )
+        )
+
+    return html.Div(
+        style={
+            "width": "260px",
+            "minWidth": "260px",
+            "backgroundColor": "#16213e",
+            "borderRight": "1px solid #2a2a4a",
+            "overflowY": "auto",
+            "padding": "16px",
+            "fontSize": "13px",
+            "color": "#c0c0d0",
+        },
+        children=[
+            html.Div("Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#6a6a80", "marginBottom": "12px"}),
+            *table_blocks,
+        ],
+    )
+
+
 app.layout = html.Div(
-    style={"maxWidth": "800px", "margin": "0 auto", "fontFamily": "'Inter', sans-serif", "height": "100vh", "display": "flex", "flexDirection": "column", "backgroundColor": "#1a1a2e", "color": "#e0e0e0", "padding": "0 15px"},
+    style={"display": "flex", "height": "100vh", "fontFamily": "'Inter', sans-serif", "backgroundColor": "#1a1a2e", "color": "#e0e0e0"},
     children=[
-        html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#e0e0e0"}),
-        html.P("Ask questions about customers, orders, and products in plain English.",
-               style={"textAlign": "center", "color": "#8e8e9e", "margin": "0 0 15px"}),
-
-        # Chat history display
+        _build_sidebar(),
         html.Div(
-            id="chat-container",
-            style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #2a2a4a", "borderRadius": "8px", "backgroundColor": "#16213e"},
-        ),
-
-        # Input area
-        html.Div(
-            style={"display": "flex", "gap": "8px", "padding": "15px 0"},
+            style={"flex": "1", "display": "flex", "flexDirection": "column", "padding": "0 15px"},
             children=[
-                dcc.Input(
-                    id="user-input",
-                    type="text",
-                    placeholder="Ask about products, orders, revenue...",
-                    style={"flex": "1", "padding": "0 12px", "borderRadius": "6px", "border": "1px solid #2a2a4a", "fontSize": "14px", "backgroundColor": "#0f3460", "color": "#e0e0e0", "height": "44px", "lineHeight": "44px"},
-                    debounce=False,
-                    n_submit=0,
+                html.H2("Jaffle Shop AI Assistant", style={"textAlign": "center", "padding": "20px 0 10px", "color": "#e0e0e0"}),
+                html.P("Ask questions about customers, orders, and products in plain English.",
+                       style={"textAlign": "center", "color": "#8e8e9e", "margin": "0 0 15px"}),
+
+                # Chat history display
+                html.Div(
+                    id="chat-container",
+                    style={"flex": "1", "overflowY": "auto", "padding": "10px", "border": "1px solid #2a2a4a", "borderRadius": "8px", "backgroundColor": "#16213e"},
                 ),
-                html.Button(
-                    "Send",
-                    id="send-btn",
-                    n_clicks=0,
-                    style={"padding": "12px 24px", "borderRadius": "6px", "border": "none", "backgroundColor": "#3498db", "color": "white", "cursor": "pointer", "fontSize": "14px"},
+
+                # Input area
+                html.Div(
+                    style={"display": "flex", "gap": "8px", "padding": "15px 0"},
+                    children=[
+                        dcc.Input(
+                            id="user-input",
+                            type="text",
+                            placeholder="Ask about products, orders, revenue...",
+                            style={"flex": "1", "padding": "0 12px", "borderRadius": "6px", "border": "1px solid #2a2a4a", "fontSize": "14px", "backgroundColor": "#0f3460", "color": "#e0e0e0", "height": "44px", "lineHeight": "44px"},
+                            debounce=False,
+                            n_submit=0,
+                        ),
+                        html.Button(
+                            "Send",
+                            id="send-btn",
+                            n_clicks=0,
+                            style={"padding": "12px 24px", "borderRadius": "6px", "border": "none", "backgroundColor": "#3498db", "color": "white", "cursor": "pointer", "fontSize": "14px"},
+                        ),
+                    ],
                 ),
+
+                # Hidden stores
+                dcc.Store(id="chat-history", data=[]),
+                dcc.Store(id="display-messages", data=[]),
             ],
         ),
-
-        # Hidden stores
-        dcc.Store(id="chat-history", data=[]),       # Claude message history
-        dcc.Store(id="display-messages", data=[]),   # UI display data
     ],
 )
 
