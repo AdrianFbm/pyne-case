@@ -1,8 +1,9 @@
 """Launch AIoli — the Jaffle Shop AI Assistant."""
 
-import subprocess
-import sys
 import os
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
-subprocess.run([sys.executable, "app.py"])
+
+from app import app
+
+app.run(debug=True, port=8050)

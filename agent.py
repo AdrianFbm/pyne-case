@@ -1,4 +1,5 @@
 import json
+import re
 from db import get_schema, run_query
 from settings import settings
 
@@ -82,7 +83,11 @@ def _call_llm(messages: list[dict]) -> dict:
         text = resp.choices[0].message.content.strip()
 
     # Strip markdown code fences if present
-    if text.startswith("```"):
-        text = text.split("\n", 1)[1]
-        text = text.rsplit("```", 1)[0]
-    return json.loads(text)
+    fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
+    if fence_match:
+        text = fence_match.group(1)
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return {"sql": None, "answer": text, "chart": None}
