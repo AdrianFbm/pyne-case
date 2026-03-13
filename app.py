@@ -19,7 +19,7 @@ app.index_string = '''<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 body { background-color: #0a0a0f; margin: 0; font-family: 'Inter', sans-serif; }
-#user-input { font-family: 'Inter', sans-serif; height: 44px; line-height: 44px; box-sizing: border-box; }
+#user-input { font-family: 'Inter', sans-serif; height: 52px; line-height: 52px; box-sizing: border-box; }
 #user-input::placeholder { color: #55556a !important; opacity: 1; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #141418; }
@@ -158,7 +158,7 @@ app.layout = html.Div(
                             id="user-input",
                             type="text",
                             placeholder="Ask about products, orders, revenue...",
-                            style={"flex": "1", "padding": "0 16px", "borderRadius": "22px", "border": "1px solid #2a2a30", "fontSize": "14px", "backgroundColor": "#1c1c22", "color": "#ececf1", "height": "44px", "lineHeight": "44px"},
+                            style={"flex": "1", "padding": "0 16px", "borderRadius": "22px", "border": "1px solid #2a2a30", "fontSize": "14px", "backgroundColor": "#1c1c22", "color": "#ececf1", "height": "52px", "lineHeight": "52px"},
                             debounce=False,
                             n_submit=0,
                         ),
