@@ -8,52 +8,52 @@ from agent import ask
 TESTS = [
     {
         "question": "How many customers are there?",
-        "check": lambda r: r.get("data") is not None and int(r["data"].iloc[0, 0]) == 200,
+        "check": lambda r: r.data is not None and int(r.data.iloc[0, 0]) == 200,
         "description": "Total customer count should be 200",
     },
     {
         "question": "What are the product categories?",
-        "check": lambda r: r.get("data") is not None and "Jaffles" in r["data"].to_string(),
+        "check": lambda r: r.data is not None and "Jaffles" in r.data.to_string(),
         "description": "Should include 'Jaffles' category",
     },
     {
         "question": "Top 5 products by revenue",
         "check": lambda r: (
-            r.get("data") is not None
-            and len(r["data"]) == 5
-            and r.get("sql") is not None
-            and "order_items" in r["sql"].lower()
+            r.data is not None
+            and len(r.data) == 5
+            and r.sql is not None
+            and "order_items" in r.sql.lower()
         ),
         "description": "Should return exactly 5 rows and join with order_items",
     },
     {
         "question": "How many orders were placed per channel?",
         "check": lambda r: (
-            r.get("data") is not None
-            and "order_channel" in " ".join(r["data"].columns).lower()
+            r.data is not None
+            and "order_channel" in " ".join(r.data.columns).lower()
         ),
         "description": "Should group by order_channel",
     },
     {
         "question": "What is the average order value?",
         "check": lambda r: (
-            r.get("data") is not None
-            and r["data"].iloc[0, 0] is not None
-            and float(r["data"].iloc[0, 0]) > 0
+            r.data is not None
+            and r.data.iloc[0, 0] is not None
+            and float(r.data.iloc[0, 0]) > 0
         ),
         "description": "Should return a positive average value",
     },
     {
         "question": "Which loyalty tier has the most customers?",
         "check": lambda r: (
-            r.get("data") is not None
-            and any(tier in r["data"].to_string().lower() for tier in ["bronze", "silver", "gold"])
+            r.data is not None
+            and any(tier in r.data.to_string().lower() for tier in ["bronze", "silver", "gold"])
         ),
         "description": "Should reference loyalty tiers",
     },
     {
         "question": "How are we doing?",
-        "check": lambda r: r.get("answer") is not None and len(r["answer"]) > 20,
+        "check": lambda r: r.answer is not None and len(r.answer) > 20,
         "description": "Ambiguous question should get a substantive response (clarification or overview)",
     },
 ]
@@ -72,10 +72,10 @@ def run_tests():
                 passed += 1
             else:
                 print(f"  ✗ FAILED")
-                print(f"    SQL: {result.get('sql')}")
-                print(f"    Answer: {result.get('answer', '')[:200]}")
-                if result.get("data") is not None:
-                    print(f"    Data:\n{result['data'].head().to_string()}")
+                print(f"    SQL: {result.sql}")
+                print(f"    Answer: {result.answer[:200]}")
+                if result.data is not None:
+                    print(f"    Data:\n{result.data.head().to_string()}")
                 failed += 1
         except Exception as e:
             print(f"  ✗ ERROR: {e}")

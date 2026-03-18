@@ -1,7 +1,27 @@
-import json
+from __future__ import annotations
+
 import re
+
+import pandas as pd
+from pydantic import BaseModel
+
 from db import get_schema, run_query
 from settings import settings
+
+
+class LLMResponse(BaseModel):
+    sql: str | None = None
+    answer: str = ""
+    chart: dict | None = None
+
+
+class AgentResponse(BaseModel):
+    model_config = {"arbitrary_types_allowed": True}
+
+    sql: str | None = None
+    answer: str = ""
+    chart: dict | None = None
+    data: pd.DataFrame | None = None
 
 if settings.llm_provider == "anthropic":
     import anthropic
@@ -16,11 +36,13 @@ _prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
 SYSTEM_PROMPT = _prompt_template.format(schema=get_schema())
 
 
-def ask(question: str, chat_history: list[dict] | None = None) -> dict:
-    """Send a question to Claude, execute any SQL, and return the final response.
+def _llm_response_to_json(response: LLMResponse) -> str:
+    """Serialize an LLMResponse for inclusion in chat messages."""
+    return response.model_dump_json()
 
-    Returns dict with keys: sql, answer, chart, data (DataFrame or None).
-    """
+
+def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
+    """Send a question to the LLM, execute any SQL, and return the final response."""
     messages = []
     if chat_history:
         messages.extend(chat_history)
@@ -29,39 +51,37 @@ def ask(question: str, chat_history: list[dict] | None = None) -> dict:
     response = _call_llm(messages)
 
     # If no SQL, it's a clarification — return as-is
-    if not response.get("sql"):
-        return {**response, "data": None}
+    if not response.sql:
+        return AgentResponse(answer=response.answer, chart=response.chart)
 
     # Execute the SQL
-    result = run_query(response["sql"])
+    result = run_query(response.sql)
 
     # If SQL failed, retry once with the error
     if isinstance(result, str):
-        messages.append({"role": "assistant", "content": json.dumps(response)})
+        messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
         messages.append({
             "role": "user",
             "content": f"That query failed with: {result}\nPlease fix the SQL and try again.",
         })
         response = _call_llm(messages)
-        if not response.get("sql"):
-            return {**response, "data": None}
-        result = run_query(response["sql"])
+        if not response.sql:
+            return AgentResponse(answer=response.answer, chart=response.chart)
+        result = run_query(response.sql)
         if isinstance(result, str):
-            return {"sql": response["sql"], "answer": f"Sorry, I couldn't run that query: {result}", "chart": None, "data": None}
+            return AgentResponse(sql=response.sql, answer=f"Sorry, I couldn't run that query: {result}")
 
-    # Success — ask Claude to interpret the results
-    messages.append({"role": "assistant", "content": json.dumps(response)})
+    # Success — ask the LLM to interpret the results
+    messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
     messages.append({
         "role": "user",
         "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
     })
     final = _call_llm(messages)
-    final["sql"] = response["sql"]
-    final["data"] = result
-    return final
+    return AgentResponse(sql=response.sql, answer=final.answer, chart=final.chart, data=result)
 
 
-def _call_llm(messages: list[dict]) -> dict:
+def _call_llm(messages: list[dict]) -> LLMResponse:
     """Call the configured LLM provider and parse the JSON response."""
     if settings.llm_provider == "anthropic":
         resp = client.messages.create(
@@ -88,6 +108,6 @@ def _call_llm(messages: list[dict]) -> dict:
         text = fence_match.group(1)
 
     try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        return {"sql": None, "answer": text, "chart": None}
+        return LLMResponse.model_validate_json(text)
+    except Exception:
+        return LLMResponse(answer=text)

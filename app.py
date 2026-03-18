@@ -332,17 +332,17 @@ def handle_llm_response(question, chat_history, display_messages, all_sqls):
         return _render_messages(display_messages), chat_history, display_messages, dash.no_update, all_sqls
 
     chat_history.append({"role": "user", "content": question})
-    chat_history.append({"role": "assistant", "content": result.get("answer", "")})
+    chat_history.append({"role": "assistant", "content": result.answer})
 
-    sql = result.get("sql")
+    sql = result.sql
     msg = {
         "role": "assistant",
-        "content": result.get("answer", ""),
+        "content": result.answer,
         "sql": sql,
-        "chart": result.get("chart"),
-        "has_data": result.get("data") is not None,
-        "data_records": result["data"].head(20).to_dict("records") if result.get("data") is not None else None,
-        "data_columns": list(result["data"].columns) if result.get("data") is not None else None,
+        "chart": result.chart,
+        "has_data": result.data is not None,
+        "data_records": result.data.head(20).to_dict("records") if result.data is not None else None,
+        "data_columns": list(result.data.columns) if result.data is not None else None,
     }
     display_messages.append(msg)
     all_sqls.append(sql)
