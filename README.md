@@ -28,7 +28,7 @@ Pytest was used to test the structure and content of responses from the LLM: sim
 
 ### Improvements and Further Work
 Some ideas that came to mind were:
-- Implementing and using a self-hosted LLM to remove dependencies on external providers.
+- Implementing and using a self-hosted LLM to remove dependencies on external providers
 - Caching: Query results and LLM respones (time-aware, since the database would be expected to grow over time)
 - Full report generation (with export) and more chart types
 
@@ -86,15 +86,6 @@ Some ideas that came to mind were:
         │  └─────────────┘  │
         └───────────────────┘
 ```
-
-## How it works
-
-1. User asks a question in the chat
-2. `agent.py` sends the question + database schema to the configured LLM
-3. The LLM responds with a SQL query and explanation (JSON)
-4. `db.py` executes the SQL against the DuckDB database
-5. Results are sent back to the LLM for a narrative summary
-6. `app.py` renders the answer, data table, and optional chart
 
 ## Setup
 
