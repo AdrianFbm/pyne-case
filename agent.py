@@ -42,6 +42,7 @@ class LLMClient:
             from openai import OpenAI
             self._client = OpenAI(api_key=settings.openai_api_key)
 
+    # Generic method to call the LLM
     def _call_llm(self, messages: list[dict]) -> LLMResponse:
         """Call the LLM and parse the JSON response."""
         if settings.llm_provider == "anthropic":
@@ -83,6 +84,21 @@ def _llm_response_to_json(response: LLMResponse) -> str:
     return response.model_dump_json()
 
 
+def _retry_failed_sql(
+    messages: list[dict], response: LLMResponse, error: str
+) -> tuple[LLMResponse, pd.DataFrame | str]:
+    """Re-ask the LLM to fix a failed SQL query and retry execution once."""
+    messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
+    messages.append({
+        "role": "user",
+        "content": f"That query failed with: {error}\nPlease fix the SQL and try again.",
+    })
+    response = _llm._call_llm(messages)
+    if not response.sql:
+        return response, error
+    return response, run_query(response.sql)
+
+
 def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
     """Send a question to the LLM, execute any SQL, and return the final response."""
     messages = []
@@ -97,26 +113,16 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         return AgentResponse(
             answer=response.answer,
             chart=response.chart,
+            sql_data=None,
         )
 
-    # Execute the SQL
+    # Execute the SQL - connection is handled inside run_query
     result = run_query(response.sql)
 
-    # If SQL failed, retry once with the error
     if isinstance(result, str):
-        messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
-        messages.append({
-            "role": "user",
-            "content": f"That query failed with: {result}\nPlease fix the SQL and try again.",
-        })
-        response = _llm._call_llm(messages)
-        if not response.sql:
-            return AgentResponse(
-                answer=response.answer,
-                chart=response.chart,
-            )
-        result = run_query(response.sql)
+        response, result = _retry_failed_sql(messages, response, result)
         if isinstance(result, str):
+            # If the SQL still fails, return the error message and the failed SQL
             return AgentResponse(
                 sql=response.sql,
                 answer=f"Sorry, I couldn't run that query: {result}",

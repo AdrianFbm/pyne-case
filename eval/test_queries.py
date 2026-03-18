@@ -74,8 +74,8 @@ def run_tests():
                 print(f"  ✗ FAILED")
                 print(f"    SQL: {result.sql}")
                 print(f"    Answer: {result.answer[:200]}")
-                if result.data is not None:
-                    print(f"    Data:\n{result.data.head().to_string()}")
+                if result.sql_data is not None:
+                    print(f"    Data:\n{result.sql_data.head().to_string()}")
                 failed += 1
         except Exception as e:
             print(f"  ✗ ERROR: {e}")
