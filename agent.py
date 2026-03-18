@@ -122,13 +122,18 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
     if isinstance(result, str):
         response, result = _retry_failed_sql(messages, response, result)
         if isinstance(result, str):
-            # If the SQL still fails, return the error message and the failed SQL
+            # If the SQL still fails, ask the LLM to explain the error
+            messages.append({
+                "role": "user",
+                "content": f"The query failed again with: {result}\nExplain to the user what might be wrong and suggest how they could rephrase their question to get a valid result.",
+            })
+            explanation = _llm._call_llm(messages)
             return AgentResponse(
                 sql=response.sql,
-                answer=f"Sorry, I couldn't run that query: {result}",
+                answer=explanation.answer,
             )
 
-    # Success — ask the LLM to interpret the results
+    # Success: ask the LLM to interpret the results
     messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
     messages.append({
         "role": "user",
