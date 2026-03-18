@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
 import pandas as pd
 from pydantic import BaseModel
@@ -23,17 +24,46 @@ class AgentResponse(BaseModel):
     chart: dict | None = None
     data: pd.DataFrame | None = None
 
-if settings.llm_provider == "anthropic":
-    import anthropic
-    client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-else:
-    from openai import OpenAI
-    client = OpenAI(api_key=settings.openai_api_key)
 
-from pathlib import Path
+class LLMClient:
+    def __init__(self):
+        prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
+        self._system_prompt = prompt_template.format(schema=get_schema())
 
-_prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
-SYSTEM_PROMPT = _prompt_template.format(schema=get_schema())
+        if settings.llm_provider == "anthropic":
+            import anthropic
+            self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        else:
+            from openai import OpenAI
+            self._client = OpenAI(api_key=settings.openai_api_key)
+
+    def call(self, messages: list[dict]) -> LLMResponse:
+        """Call the LLM and parse the JSON response."""
+        if settings.llm_provider == "anthropic":
+            resp = self._client.messages.create(
+                model=settings.llm_model, max_tokens=1024, temperature=0,
+                system=self._system_prompt, messages=messages,
+            )
+            text = resp.content[0].text.strip()
+        else:
+            openai_messages = [{"role": "system", "content": self._system_prompt}, *messages]
+            resp = self._client.chat.completions.create(
+                model=settings.llm_model, max_tokens=1024, temperature=0,
+                messages=openai_messages,
+            )
+            text = resp.choices[0].message.content.strip()
+
+        fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
+        if fence_match:
+            text = fence_match.group(1)
+
+        try:
+            return LLMResponse.model_validate_json(text)
+        except Exception:
+            return LLMResponse(answer=text)
+
+
+_llm = LLMClient()
 
 
 def _llm_response_to_json(response: LLMResponse) -> str:
@@ -48,7 +78,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         messages.extend(chat_history)
     messages.append({"role": "user", "content": question})
 
-    response = _call_llm(messages)
+    response = _llm.call(messages)
 
     # If no SQL, it's a clarification — return as-is
     if not response.sql:
@@ -67,7 +97,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
             "role": "user",
             "content": f"That query failed with: {result}\nPlease fix the SQL and try again.",
         })
-        response = _call_llm(messages)
+        response = _llm.call(messages)
         if not response.sql:
             return AgentResponse(
                 answer=response.answer,
@@ -86,7 +116,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         "role": "user",
         "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
     })
-    final = _call_llm(messages)
+    final = _llm.call(messages)
     return AgentResponse(
         sql=response.sql,
         answer=final.answer,
@@ -95,33 +125,3 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
     )
 
 
-def _call_llm(messages: list[dict]) -> LLMResponse:
-    """Call the configured LLM provider and parse the JSON response."""
-    if settings.llm_provider == "anthropic":
-        resp = client.messages.create(
-            model=settings.llm_model,
-            max_tokens=1024,
-            temperature=0,
-            system=SYSTEM_PROMPT,
-            messages=messages,
-        )
-        text = resp.content[0].text.strip()
-    else:
-        openai_messages = [{"role": "system", "content": SYSTEM_PROMPT}, *messages]
-        resp = client.chat.completions.create(
-            model=settings.llm_model,
-            max_tokens=1024,
-            temperature=0,
-            messages=openai_messages,
-        )
-        text = resp.choices[0].message.content.strip()
-
-    # Strip markdown code fences if present
-    fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
-    if fence_match:
-        text = fence_match.group(1)
-
-    try:
-        return LLMResponse.model_validate_json(text)
-    except Exception:
-        return LLMResponse(answer=text)
