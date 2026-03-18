@@ -52,7 +52,10 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
 
     # If no SQL, it's a clarification — return as-is
     if not response.sql:
-        return AgentResponse(answer=response.answer, chart=response.chart)
+        return AgentResponse(
+            answer=response.answer,
+            chart=response.chart,
+        )
 
     # Execute the SQL
     result = run_query(response.sql)
@@ -66,10 +69,16 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         })
         response = _call_llm(messages)
         if not response.sql:
-            return AgentResponse(answer=response.answer, chart=response.chart)
+            return AgentResponse(
+                answer=response.answer,
+                chart=response.chart,
+            )
         result = run_query(response.sql)
         if isinstance(result, str):
-            return AgentResponse(sql=response.sql, answer=f"Sorry, I couldn't run that query: {result}")
+            return AgentResponse(
+                sql=response.sql,
+                answer=f"Sorry, I couldn't run that query: {result}",
+            )
 
     # Success — ask the LLM to interpret the results
     messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
@@ -78,7 +87,12 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
     })
     final = _call_llm(messages)
-    return AgentResponse(sql=response.sql, answer=final.answer, chart=final.chart, data=result)
+    return AgentResponse(
+        sql=response.sql,
+        answer=final.answer,
+        chart=final.chart,
+        data=result,
+    )
 
 
 def _call_llm(messages: list[dict]) -> LLMResponse:
