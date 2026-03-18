@@ -340,9 +340,9 @@ def handle_llm_response(question, chat_history, display_messages, all_sqls):
         "content": result.answer,
         "sql": sql,
         "chart": result.chart,
-        "has_data": result.data is not None,
-        "data_records": result.data.head(20).to_dict("records") if result.data is not None else None,
-        "data_columns": list(result.data.columns) if result.data is not None else None,
+        "has_data": result.sql_data is not None,
+        "data_records": result.sql_data.head(20).to_dict("records") if result.sql_data is not None else None,
+        "data_columns": list(result.sql_data.columns) if result.sql_data is not None else None,
     }
     display_messages.append(msg)
     all_sqls.append(sql)

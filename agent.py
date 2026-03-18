@@ -25,7 +25,7 @@ class AgentResponse(BaseModel):
     sql: str | None = None
     answer: str = ""
     chart: dict | None = None
-    data: pd.DataFrame | None = None
+    sql_data: pd.DataFrame | None = None
 
 
 class LLMClient:
@@ -133,7 +133,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         sql=response.sql,
         answer=final.answer,
         chart=final.chart,
-        data=result,
+        sql_data=result,
     )
 
 
