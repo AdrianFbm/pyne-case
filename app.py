@@ -1,5 +1,7 @@
 import dash
-from dash import html, dcc, Input, Output, State, callback, dash_table, ctx
+from dash import html, dcc, Input, Output, State, callback, dash_table, ctx, ALL, MATCH
+import pandas as pd
+from db import run_query
 import plotly.express as px
 from agent import ask
 
@@ -26,8 +28,33 @@ body { background-color: #0a0a0f; margin: 0; font-family: 'Inter', sans-serif; }
 ::-webkit-scrollbar-thumb { background: #2a2a30; border-radius: 3px; }
 details summary::-webkit-details-marker { display: none; }
 details > summary { list-style: none; }
-#send-btn { transition: background-color 0.2s ease; }
+#send-btn, .sql-action-btn { transition: background-color 0.2s ease; }
 #send-btn:hover { background-color: #6a4de0 !important; }
+#sql-editor {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  background-color: #0e0e14;
+  color: #a8b4ff;
+  border: 1px solid #2a2a30;
+  border-radius: 6px;
+  padding: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+#sql-editor:focus { outline: 1px solid #7c5cfc; }
+.sql-action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+}
+.sql-action-btn:hover { opacity: 0.85; }
+.copy-sql-btn { background: none; border: none; color: #7c5cfc; cursor: pointer; font-size: 11px; padding: 4px 8px; font-family: 'Inter', sans-serif; }
+.copy-sql-btn:hover { text-decoration: underline; }
 @keyframes dotPulse {
   0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
   40% { opacity: 1; transform: scale(1); }
@@ -129,6 +156,26 @@ def _build_sidebar():
             )
         )
 
+    sql_editor_section = [
+        html.Div("SQL Editor", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#55556a", "marginBottom": "12px", "marginTop": "20px", "borderTop": "1px solid #2a2a30", "paddingTop": "16px"}),
+        dcc.Textarea(
+            id="sql-editor",
+            placeholder="SELECT * FROM customers LIMIT 10",
+            rows=6,
+            style={"width": "100%", "marginBottom": "8px"},
+        ),
+        html.Div(
+            style={"display": "flex", "gap": "6px", "marginBottom": "10px"},
+            children=[
+                html.Button("Run", id="run-sql-btn", n_clicks=0, className="sql-action-btn",
+                            style={"backgroundColor": "#7c5cfc", "color": "white"}),
+                html.Button("Run latest", id="run-latest-btn", n_clicks=0, className="sql-action-btn",
+                            style={"backgroundColor": "#2a2a30", "color": "#ececf1"}),
+            ],
+        ),
+        html.Div(id="sql-results"),
+    ]
+
     return html.Div(
         style={
             "width": "260px",
@@ -143,6 +190,7 @@ def _build_sidebar():
         children=[
             html.Div("Database Schema", style={"fontSize": "11px", "textTransform": "uppercase", "letterSpacing": "1px", "color": "#55556a", "marginBottom": "12px"}),
             *table_blocks,
+            *sql_editor_section,
         ],
     )
 
@@ -195,6 +243,8 @@ app.layout = html.Div(
                 dcc.Store(id="chat-history", data=[]),
                 dcc.Store(id="display-messages", data=[]),
                 dcc.Store(id="pending-question", data=None),
+                dcc.Store(id="latest-chat-sql", data=None),
+                dcc.Store(id="all-chat-sqls", data=[]),
             ],
         ),
     ],
@@ -257,45 +307,54 @@ def show_user_message(n_clicks, n_submit, user_input, display_messages):
     Output("chat-container", "children"),
     Output("chat-history", "data"),
     Output("display-messages", "data"),
+    Output("latest-chat-sql", "data"),
+    Output("all-chat-sqls", "data"),
     Input("pending-question", "data"),
     State("chat-history", "data"),
     State("display-messages", "data"),
+    State("all-chat-sqls", "data"),
     prevent_initial_call=True,
 )
-def handle_llm_response(question, chat_history, display_messages):
+def handle_llm_response(question, chat_history, display_messages, all_sqls):
     """Call the LLM and replace the loading indicator with the response."""
     if not question:
-        return dash.no_update, dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
     chat_history = chat_history or []
     display_messages = display_messages or []
+    all_sqls = all_sqls or []
 
     try:
         result = ask(question, chat_history)
     except Exception as e:
         display_messages.append({"role": "assistant", "content": f"Sorry, something went wrong: {e}", "sql": None, "chart": None, "has_data": False})
-        return _render_messages(display_messages), chat_history, display_messages
+        all_sqls.append(None)
+        return _render_messages(display_messages), chat_history, display_messages, dash.no_update, all_sqls
 
     chat_history.append({"role": "user", "content": question})
     chat_history.append({"role": "assistant", "content": result.get("answer", "")})
 
+    sql = result.get("sql")
     msg = {
         "role": "assistant",
         "content": result.get("answer", ""),
-        "sql": result.get("sql"),
+        "sql": sql,
         "chart": result.get("chart"),
         "has_data": result.get("data") is not None,
         "data_records": result["data"].head(20).to_dict("records") if result.get("data") is not None else None,
         "data_columns": list(result["data"].columns) if result.get("data") is not None else None,
     }
     display_messages.append(msg)
+    all_sqls.append(sql)
+    latest_sql = sql if sql else dash.no_update
 
-    return _render_messages(display_messages), chat_history, display_messages
+    return _render_messages(display_messages), chat_history, display_messages, latest_sql, all_sqls
 
 
 def _render_messages(messages):
     """Convert stored messages into Dash components."""
     elements = []
+    sql_index = 0
     for msg in messages:
         if msg["role"] == "user":
             elements.append(user_bubble(msg["content"]))
@@ -308,8 +367,12 @@ def _render_messages(messages):
                     html.Details([
                         html.Summary("View SQL", style={"cursor": "pointer", "color": "#8e8ea0", "fontSize": "12px"}),
                         html.Code(msg["sql"], style={"display": "block", "padding": "8px", "backgroundColor": "#0e0e14", "color": "#a8b4ff", "borderRadius": "4px", "fontSize": "12px", "whiteSpace": "pre-wrap"}),
+                        html.Button("Copy to editor", className="copy-sql-btn",
+                                    id={"type": "copy-sql-btn", "index": sql_index},
+                                    n_clicks=0),
                     ], style={"marginTop": "8px"})
                 )
+                sql_index += 1
 
             # Data table
             if msg.get("data_records"):
@@ -328,7 +391,6 @@ def _render_messages(messages):
             # Chart
             if msg.get("chart") and msg.get("data_records"):
                 chart = msg["chart"]
-                import pandas as pd
                 df = pd.DataFrame(msg["data_records"])
                 fig = None
                 if chart.get("type") == "bar":
@@ -343,6 +405,80 @@ def _render_messages(messages):
 
             elements.append(assistant_bubble(children))
     return elements
+
+
+@callback(
+    Output("sql-editor", "value", allow_duplicate=True),
+    Input({"type": "copy-sql-btn", "index": ALL}, "n_clicks"),
+    State("all-chat-sqls", "data"),
+    prevent_initial_call=True,
+)
+def copy_sql_to_editor(n_clicks_list, all_sqls):
+    """Copy a specific SQL query from chat into the SQL editor."""
+    if not ctx.triggered_id or not any(n_clicks_list):
+        return dash.no_update
+    index = ctx.triggered_id["index"]
+    # all_sqls contains one entry per assistant message (None if no SQL)
+    # But sql_index only counts messages that have SQL, so we need to map
+    sql_only = [s for s in (all_sqls or []) if s]
+    if index < len(sql_only):
+        return sql_only[index]
+    return dash.no_update
+
+
+@callback(
+    Output("sql-results", "children"),
+    Input("run-sql-btn", "n_clicks"),
+    State("sql-editor", "value"),
+    prevent_initial_call=True,
+)
+def run_sql(n_clicks, sql):
+    """Execute the SQL in the editor and display results."""
+    if not sql or not sql.strip():
+        return html.Div("Enter a SQL query to run.", style={"color": "#55556a", "fontSize": "12px"})
+    result = run_query(sql.strip())
+    if isinstance(result, str):
+        return html.Div(result, style={"color": "#ff6b6b", "fontSize": "12px", "whiteSpace": "pre-wrap"})
+    if result.empty:
+        return html.Div("Query returned no rows.", style={"color": "#8e8ea0", "fontSize": "12px"})
+    return dash_table.DataTable(
+        data=result.head(50).to_dict("records"),
+        columns=[{"name": c, "id": c} for c in result.columns],
+        style_table={"overflowX": "auto"},
+        style_cell={"textAlign": "left", "padding": "4px 8px", "fontSize": "11px", "backgroundColor": "#141418", "color": "#ececf1", "border": "1px solid #2a2a30", "maxWidth": "180px", "overflow": "hidden", "textOverflow": "ellipsis"},
+        style_header={"backgroundColor": "#1c1c22", "fontWeight": "bold", "color": "#ececf1", "border": "1px solid #2a2a30"},
+        style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#18181e"}],
+        page_size=10,
+    )
+
+
+@callback(
+    Output("sql-editor", "value"),
+    Output("sql-results", "children", allow_duplicate=True),
+    Input("run-latest-btn", "n_clicks"),
+    State("latest-chat-sql", "data"),
+    prevent_initial_call=True,
+)
+def run_latest_from_chat(n_clicks, latest_sql):
+    """Fill the editor with the latest chat SQL and run it."""
+    if not latest_sql:
+        return dash.no_update, html.Div("No SQL from chat yet.", style={"color": "#55556a", "fontSize": "12px"})
+    result = run_query(latest_sql.strip())
+    if isinstance(result, str):
+        result_component = html.Div(result, style={"color": "#ff6b6b", "fontSize": "12px", "whiteSpace": "pre-wrap"})
+    elif result.empty:
+        result_component = html.Div("Query returned no rows.", style={"color": "#8e8ea0", "fontSize": "12px"})
+    else:
+        result_component = dash_table.DataTable(
+            data=result.head(50).to_dict("records"),
+            columns=[{"name": c, "id": c} for c in result.columns],
+            style_table={"overflowX": "auto"},
+            style_cell={"textAlign": "left", "padding": "4px 8px", "fontSize": "11px", "backgroundColor": "#141418", "color": "#ececf1", "border": "1px solid #2a2a30", "maxWidth": "180px", "overflow": "hidden", "textOverflow": "ellipsis"},
+            style_header={"backgroundColor": "#1c1c22", "fontWeight": "bold", "color": "#ececf1", "border": "1px solid #2a2a30"},
+            style_data_conditional=[{"if": {"row_index": "odd"}, "backgroundColor": "#18181e"}],
+            page_size=10,
+        )
+    return latest_sql, result_component
 
 
 if __name__ == "__main__":
