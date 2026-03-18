@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 import pandas as pd
 from pydantic import BaseModel
@@ -27,9 +30,11 @@ class AgentResponse(BaseModel):
 
 class LLMClient:
     def __init__(self):
+        # Initializing the system prompt and adding the current schema
         prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
         self._system_prompt = prompt_template.format(schema=get_schema())
 
+        # Establish connection to the LLM provider
         if settings.llm_provider == "anthropic":
             import anthropic
             self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
@@ -37,29 +42,36 @@ class LLMClient:
             from openai import OpenAI
             self._client = OpenAI(api_key=settings.openai_api_key)
 
-    def call(self, messages: list[dict]) -> LLMResponse:
+    def _call_llm(self, messages: list[dict]) -> LLMResponse:
         """Call the LLM and parse the JSON response."""
         if settings.llm_provider == "anthropic":
             resp = self._client.messages.create(
-                model=settings.llm_model, max_tokens=1024, temperature=0,
-                system=self._system_prompt, messages=messages,
+                model=settings.llm_model,
+                max_tokens=settings.max_tokens,
+                temperature=settings.temperature,
+                system=self._system_prompt,
+                messages=messages,
             )
             text = resp.content[0].text.strip()
         else:
             openai_messages = [{"role": "system", "content": self._system_prompt}, *messages]
             resp = self._client.chat.completions.create(
-                model=settings.llm_model, max_tokens=1024, temperature=0,
+                model=settings.llm_model,
+                max_tokens=settings.max_tokens,
+                temperature=settings.temperature,
                 messages=openai_messages,
             )
             text = resp.choices[0].message.content.strip()
 
+        # Strip markdown code fences if present
         fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
         if fence_match:
             text = fence_match.group(1)
 
         try:
             return LLMResponse.model_validate_json(text)
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to parse LLM response: %s", e)
             return LLMResponse(answer=text)
 
 
@@ -78,7 +90,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         messages.extend(chat_history)
     messages.append({"role": "user", "content": question})
 
-    response = _llm.call(messages)
+    response = _llm._call_llm(messages)
 
     # If no SQL, it's a clarification — return as-is
     if not response.sql:
@@ -97,7 +109,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
             "role": "user",
             "content": f"That query failed with: {result}\nPlease fix the SQL and try again.",
         })
-        response = _llm.call(messages)
+        response = _llm._call_llm(messages)
         if not response.sql:
             return AgentResponse(
                 answer=response.answer,
@@ -116,7 +128,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
         "role": "user",
         "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
     })
-    final = _llm.call(messages)
+    final = _llm._call_llm(messages)
     return AgentResponse(
         sql=response.sql,
         answer=final.answer,

@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
 
+    max_tokens: int = 1024
+    temperature: float = 0.0
+
     @model_validator(mode="after")
     def _resolve_provider(self):
         if not self.llm_provider:
