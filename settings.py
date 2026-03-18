@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     max_tokens: int = 1024
     temperature: float = 0.0
+    blocked_sql_keywords: set[str] = {"DROP", "DELETE", "INSERT", "UPDATE", "ALTER", "CREATE", "TRUNCATE", "REPLACE"}
 
     @model_validator(mode="after")
     def _resolve_provider(self):

@@ -1,5 +1,6 @@
 import duckdb
 import pandas as pd
+from settings import settings
 
 DB_PATH = "AI_Engineering_case/jaffle_shop.duckdb"
 
@@ -19,6 +20,9 @@ def get_schema() -> str:
 
 def run_query(sql: str) -> pd.DataFrame | str:
     """Execute SQL and return a DataFrame on success or an error string on failure."""
+    first_keyword = sql.strip().split()[0].upper() if sql.strip() else ""
+    if first_keyword in settings.blocked_sql_keywords:
+        return f"Blocked: {first_keyword} statements are not allowed. Please use a SELECT query instead."
     con = duckdb.connect(DB_PATH, read_only=True)
     try:
         result = con.execute(sql).fetchdf()
