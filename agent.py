@@ -108,7 +108,7 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
 
     response = _llm._call_llm(messages)
 
-    # If no SQL, it's a clarification — return as-is
+    # If no SQL, it's a clarification request - return as-is
     if not response.sql:
         return AgentResponse(
             answer=response.answer,

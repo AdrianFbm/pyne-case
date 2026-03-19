@@ -10,13 +10,12 @@ Built with Python, Dash, DuckDB, and using LLM APIs (Anthropic Claude or OpenAI 
 
 I wanted to build a simple app with the backend handling queries to the DuckDB and LLM responses, along with a chat UI to display the LLM answer alongside SQL code and graphs/charts. 
 
-Given that the quality of the responses would rely heavily on external LLMs, my main focus was to create consistency in the outputs - two identical questions should preferably give identical answers. I defined a clear system prompt and set the temperature to 0. The system prompt contains all the context (including dynamically loaded database schema) and requirements given to the LLM.
+Given that the quality of the responses would rely heavily on external LLMs, my main focus was to ensure a high level of consistency in the outputs - two identical questions should preferably give (almost) identical answers. I defined a clear system prompt and set the temperature to 0. The system prompt contains all the context (including dynamically loaded database schema) and requirements given to the LLM.
 
 Outputs are constructed in a two-call process:
 1. The user asks a questions -> the LLM returns SQL (first call to LLM)
 2. The agent (backend) runs the SQL on the DuckDB and gets the query results
-3. The agent sends the query results to the LLM (second call to LLM) and the LLM returns the final response
-to the user
+3. The agent sends the query results to the LLM (second call to LLM) and the LLM returns the final response to the agent that sends it to the user
 
 ### Failure handling and Guardrails
 If the SQL code is not returning data (pandas df), the error message (Exception) is sent to the LLM asking for a fix. If the SQL code still fails, an explanation of why the query might have failed is returned to the user. (Unfortunately?) the LLM is too smart to answer questions like: "Show me all employee salaries" and "What's the average shipping time?" that could produce SQL errors, so actual tests for this was hard to carry out.
