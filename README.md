@@ -28,7 +28,7 @@ Pytest was used to test the structure and content of responses from the LLM: sim
 ### Improvements and Further Work
 Some ideas that came to mind were:
 - Implementing and using a self-hosted LLM to remove dependencies on external providers
-- Caching: Query results and LLM respones (time-aware, since the database would be expected to grow over time)
+- Caching and chat history management: Query results and LLM respones (time-aware, since the database would be expected to grow over time). Chat context management so that chat history does not grow unbounded.
 - Full report generation (with export) and more chart types
 - Forecasting with ML
 

@@ -317,6 +317,7 @@ def show_user_message(n_clicks, n_submit, user_input, display_messages):
 )
 def handle_llm_response(question, chat_history, display_messages, all_sqls):
     """Call the LLM and replace the loading indicator with the response."""
+    # Skip if no question was set (e.g. initial page load)
     if not question:
         return dash.no_update, dash.no_update, dash.no_update, dash.no_update, dash.no_update
 
@@ -324,16 +325,20 @@ def handle_llm_response(question, chat_history, display_messages, all_sqls):
     display_messages = display_messages or []
     all_sqls = all_sqls or []
 
+    # Call the AI agent with the question and conversation history
     try:
         result = ask(question, chat_history)
     except Exception as e:
+        # On failure, show error message in chat and bail out
         display_messages.append({"role": "assistant", "content": f"Sorry, something went wrong: {e}", "sql": None, "chart": None, "has_data": False})
         all_sqls.append(None)
         return _render_messages(display_messages), chat_history, display_messages, dash.no_update, all_sqls
 
+    # Keep chat history in sync for future LLM calls
     chat_history.append({"role": "user", "content": question})
     chat_history.append({"role": "assistant", "content": result.answer})
 
+    # Build the display message with all response parts (text, SQL, chart, data)
     sql = result.sql
     msg = {
         "role": "assistant",
@@ -348,6 +353,7 @@ def handle_llm_response(question, chat_history, display_messages, all_sqls):
     all_sqls.append(sql)
     latest_sql = sql if sql else dash.no_update
 
+    # Return updated chat UI, history, and SQL stores
     return _render_messages(display_messages), chat_history, display_messages, latest_sql, all_sqls
 
 
