@@ -40,7 +40,15 @@ class LLMClient:
         self._system_prompt = prompt_template.format(schema=schema)
 
         # Establish connection to the LLM provider
-        if settings.llm_provider == "anthropic":
+        if settings.llm_provider == "local":
+            from llama_cpp import Llama
+            self._client = Llama(
+                model_path=settings.local_model_path,
+                n_ctx=4096,
+                n_threads=None,  # auto-detect
+                verbose=False,
+            )
+        elif settings.llm_provider == "anthropic":
             import anthropic
             self._client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         else:
@@ -50,7 +58,15 @@ class LLMClient:
     # Generic method to call the LLM
     def _call_llm(self, messages: list[dict]) -> LLMResponse:
         """Call the LLM and parse the JSON response."""
-        if settings.llm_provider == "anthropic":
+        if settings.llm_provider == "local":
+            local_messages = [{"role": "system", "content": self._system_prompt}, *messages]
+            resp = self._client.create_chat_completion(
+                messages=local_messages,
+                max_tokens=settings.max_tokens,
+                temperature=settings.temperature,
+            )
+            text = resp["choices"][0]["message"]["content"].strip()
+        elif settings.llm_provider == "anthropic":
             resp = self._client.messages.create(
                 model=settings.llm_model,
                 max_tokens=settings.max_tokens,
