@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 import pandas as pd
 from pydantic import BaseModel
 
-from db import get_schema, run_query
+from mcp_client import get_session, mcp_run
 from settings import settings
 
 
@@ -30,9 +30,14 @@ class AgentResponse(BaseModel):
 
 class LLMClient:
     def __init__(self):
+        # Open MCP session and fetch schema via resource
+        self._mcp_session = get_session()
+        resource = mcp_run(self._mcp_session.read_resource("jaffle://schema"))
+        schema = resource.contents[0].text
+
         # Initializing the system prompt and adding the current schema
         prompt_template = Path(__file__).with_name("system_prompt.md").read_text()
-        self._system_prompt = prompt_template.format(schema=get_schema())
+        self._system_prompt = prompt_template.format(schema=schema)
 
         # Establish connection to the LLM provider
         if settings.llm_provider == "anthropic":
@@ -96,7 +101,9 @@ def _retry_failed_sql(
     response = _llm._call_llm(messages)
     if not response.sql:
         return response, error
-    return response, run_query(response.sql)
+    tool_result = mcp_run(_llm._mcp_session.call_tool("run_query", {"sql": response.sql}))
+    raw = tool_result.content[0].text
+    return response, pd.read_csv(pd.io.common.StringIO(raw), sep=r"\s{2,}", engine="python") if not raw.startswith("ERROR") else raw
 
 
 def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
@@ -116,8 +123,10 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
             sql_data=None,
         )
 
-    # Execute the SQL - connection is handled inside run_query
-    result = run_query(response.sql)
+    # Execute the SQL via MCP tool
+    tool_result = mcp_run(_llm._mcp_session.call_tool("run_query", {"sql": response.sql}))
+    raw = tool_result.content[0].text
+    result = pd.read_csv(pd.io.common.StringIO(raw), sep=r"\s{2,}", engine="python") if not raw.startswith("ERROR") else raw
 
     if isinstance(result, str):
         response, result = _retry_failed_sql(messages, response, result)
@@ -133,12 +142,14 @@ def ask(question: str, chat_history: list[dict] | None = None) -> AgentResponse:
                 answer=explanation.answer,
             )
 
-    # Success: ask the LLM to interpret the results
+    # Success: fetch the explain_results prompt from MCP server and ask LLM to interpret
+    prompt = mcp_run(_llm._mcp_session.get_prompt("explain_results", {
+        "question": question,
+        "sql": response.sql,
+        "results": result.head(50).to_string(index=False),
+    }))
     messages.append({"role": "assistant", "content": _llm_response_to_json(response)})
-    messages.append({
-        "role": "user",
-        "content": f"Query results (first 50 rows):\n{result.head(50).to_string(index=False)}\n\nNow provide your final JSON response with the narrative answer and optional chart spec.",
-    })
+    messages.append({"role": "user", "content": prompt.messages[0].content.text})
     final = _llm._call_llm(messages)
     return AgentResponse(
         sql=response.sql,
